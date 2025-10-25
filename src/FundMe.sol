@@ -6,24 +6,30 @@
 pragma solidity 0.8.30;
 
 import {EthToUsdConverter} from "./EthToUsdConverter.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 error FundMe__NotOwner();
 
 contract FundMe {
     using EthToUsdConverter for uint256;
     uint256 public constant MIN_USD = 5e18; // 5 USD (5 * 1e18)
-    address public immutable i_owner; // convertion for immutable variables is `i_` as prefix
+    address private immutable i_owner; // convertion for immutable variables is `i_` as prefix
+    AggregatorV3Interface private s_priceFeed; // convertion for storage variables is `s_` as prefix
 
     // for looping throught the keys of `addressToFundAmount` mapping, we store the keys separately in `funders`
-    mapping(address => uint256) public addressToFundAmount;
-    address[] funders;
+    mapping(address => uint256) private addressToFundAmount;
+    address[] private funders;
 
-    constructor() {
+    constructor(address priceFeedAddress) {
         i_owner = msg.sender;
+        s_priceFeed = AggregatorV3Interface(priceFeedAddress);
     }
 
     function fund() public payable {
-        require(msg.value.convertEthToUsd() >= MIN_USD, "Not enough ETH");
+        require(
+            msg.value.convertEthToUsd(s_priceFeed) >= MIN_USD,
+            "Not enough ETH"
+        );
         addressToFundAmount[msg.sender] += msg.value;
         funders.push(msg.sender);
     }
@@ -69,5 +75,21 @@ contract FundMe {
     fallback() external payable {
         // triggered automatically when calldata is present
         fund();
+    }
+
+    function getVersion() external view returns (uint256) {
+        return s_priceFeed.version();
+    }
+
+    function getAddressToFundAmount(address addr) external view returns (uint256) {
+        return addressToFundAmount[addr];
+    }
+
+    function getFunder(uint256 index) external view returns (address) {
+        return funders[index];
+    }
+
+    function getOwner() external view returns (address) {
+        return i_owner;
     }
 }

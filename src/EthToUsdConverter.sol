@@ -6,11 +6,9 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 
 library EthToUsdConverter {
     // Returns ETH price scaled to 18 decimals
-    function getLatestEthPrice() public view returns (uint256) {
-        AggregatorV3Interface dataFeed = AggregatorV3Interface(
-            0x694AA1769357215DE4FAC081bf1f309aDC325306 // Sepolia ETH/USD price feed contract address
-        );
-
+    function getLatestEthPrice(
+        AggregatorV3Interface dataFeed
+    ) public view returns (uint256) {
         (, int256 price, , uint256 updatedAt, ) = dataFeed.latestRoundData(); // price is something like 4000_00000000
         require(price > 0, "bad price");
         require(updatedAt != 0, "stale price");
@@ -26,9 +24,10 @@ library EthToUsdConverter {
 
     // Converts ETH amount (wei) to USD (18 decimals)
     function convertEthToUsd(
-        uint256 ethAmountWei
+        uint256 ethAmountWei,
+        AggregatorV3Interface dataFeed
     ) internal view returns (uint256) {
-        uint256 ethPrice18 = getLatestEthPrice(); // 18 decimals
+        uint256 ethPrice18 = getLatestEthPrice(dataFeed); // 18 decimals
         // (ethPrice18 * ethAmountWei) / 1e18 keeps 18-decimal USD
         return (ethPrice18 * ethAmountWei) / 1e18;
     }
