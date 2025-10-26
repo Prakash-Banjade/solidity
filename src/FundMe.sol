@@ -16,9 +16,9 @@ contract FundMe {
     address private immutable i_owner; // convertion for immutable variables is `i_` as prefix
     AggregatorV3Interface private s_priceFeed; // convertion for storage variables is `s_` as prefix
 
-    // for looping throught the keys of `addressToFundAmount` mapping, we store the keys separately in `funders`
-    mapping(address => uint256) private addressToFundAmount;
-    address[] private funders;
+    // for looping throught the keys of `s_addressToFundAmount` mapping, we store the keys separately in `s_funders`
+    mapping(address => uint256) private s_addressToFundAmount;
+    address[] private s_funders;
 
     constructor(address priceFeedAddress) {
         i_owner = msg.sender;
@@ -30,19 +30,21 @@ contract FundMe {
             msg.value.convertEthToUsd(s_priceFeed) >= MIN_USD,
             "Not enough ETH"
         );
-        addressToFundAmount[msg.sender] += msg.value;
-        funders.push(msg.sender);
+        s_addressToFundAmount[msg.sender] += msg.value;
+        s_funders.push(msg.sender);
     }
 
     function withdraw() public onlyOwner {
-        // reset the `addressToFundAmount` mapping values to 0 and reset the `funders` array
-        for (uint i = 0; i < funders.length; i++) {
-            address funder = funders[i];
-            addressToFundAmount[funder] = 0;
+        uint256 fundersLength = s_funders.length;
+
+        // reset the `s_addressToFundAmount` mapping values to 0 and reset the `s_funders` array
+        for (uint i = 0; i < fundersLength; i++) {
+            address funder = s_funders[i];
+            s_addressToFundAmount[funder] = 0;
         }
 
-        // funders = new address[](0); // fill with 0
-        delete funders; // more gas efficient
+        // s_funders = new address[](0); // fill with 0
+        delete s_funders; // more gas efficient
 
         // send ether - 3 ways
         // 1. transfer
@@ -81,12 +83,14 @@ contract FundMe {
         return s_priceFeed.version();
     }
 
-    function getAddressToFundAmount(address addr) external view returns (uint256) {
-        return addressToFundAmount[addr];
+    function getAddressToFundAmount(
+        address addr
+    ) external view returns (uint256) {
+        return s_addressToFundAmount[addr];
     }
 
     function getFunder(uint256 index) external view returns (address) {
-        return funders[index];
+        return s_funders[index];
     }
 
     function getOwner() external view returns (address) {
